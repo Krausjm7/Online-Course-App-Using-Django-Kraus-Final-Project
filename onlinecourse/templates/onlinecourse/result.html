@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exam Result for {{ course.name }}</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="navbar-brand" href="{% url 'onlinecourse:index' %}">Online Course</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'onlinecourse:index' %}">Home</a>
+                </li>
+            </ul>
+            <ul class="navbar-nav">
+                {% if user.is_authenticated %}
+                <li class="nav-item">
+                    <span class="navbar-text mr-3">Welcome, {{ user.username }}!</span>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'onlinecourse:logout' %}">Logout</a>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'onlinecourse:login' %}">Login</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'onlinecourse:registration' %}">Register</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h2 class="mb-4">Exam Result for {{ course.name }}</h2>
+        <h3>Your Total Score: {{ total_score }} / {{ max_score }}</h3>
+
+        {# Pass/Fail Output based on a threshold (e.g., 70%) #}
+        {# Use the passing_threshold calculated in the view directly #}
+        {% if total_score >= passing_threshold %} 
+            <div class="alert alert-success" role="alert">
+                <b>Congratulations! {{ user.first_name }}</b> You have passed the exam and completed the course with score {{ total_score }}/{{ max_score }}! 🎉
+            </div>
+        {% else %}
+            <div class="alert alert-danger" role="alert">
+                <b>Failed</b> Sorry, {{ user.first_name }} You have failed the exam with score {{ total_score }}/{{ max_score }}. You may retake it. 😔
+            </div>
+        {% endif %}
+        
+        <p>Submission ID: {{ submission.id }}</p>
+        <p>Date Submitted: {{ submission.enrollment.date_enrolled }}</p>
+
+        <hr>
+
+        <h4>Question Results:</h4>
+        {# Loop through each question result to show details #}
+        {% for q_result in questions_results %}
+            <div class="card mb-3 {% if q_result.is_correct_answer %}border-success{% else %}border-danger{% endif %}">
+                <div class="card-header bg-light">
+                    <h5>
+                        {{ forloop.counter }}. {{ q_result.question.content }}
+                        <span class="float-right">Grade: {{ q_result.question.grade }} points</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for choice in q_result.all_choices %}
+                            <li class="list-group-item">
+                                {# Checkbox for visual representation of selection #}
+                                <input type="checkbox" disabled
+                                       {% if choice in q_result.selected_choices %}checked{% endif %}>
+                                
+                                {{ choice.content }}
+
+                                {# Display status of each choice based on correctness and user selection #}
+                                {% if choice in q_result.correct_choices %}
+                                    {% if choice in q_result.selected_choices %}
+                                        <span class="badge badge-success ml-2">Correct & Selected</span>
+                                    {% else %}
+                                        <span class="badge badge-warning ml-2">Correct, but Not Selected</span>
+                                    {% endif %}
+                                {% elif choice in q_result.selected_choices %} {# Not correct, but user selected #}
+                                    <span class="badge badge-danger ml-2">Incorrectly Selected</span>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                    <div class="mt-2">
+                        {% if q_result.is_correct_answer %}
+                            <span class="badge badge-success">**Correct!** You scored {{ q_result.score_earned }} points for this question.</span>
+                        {% else %}
+                            <span class="badge badge-danger">**Incorrect.** You scored {{ q_result.score_earned }} points for this question.</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+
+        {# Allow retake if failed, or just a back to course button #}
+        <div class="mt-4 text-center">
+            {% if total_score < passing_threshold %} {# If failed, offer retake #}
+                <a href="{% url 'onlinecourse:course_details' course.id %}" class="btn btn-warning btn-lg">Retake Exam</a>
+            {% else %}
+                <a href="{% url 'onlinecourse:course_details' course.id %}" class="btn btn-primary btn-lg">Back to Course</a>
+            {% endif %}
+        </div>
+    </div>
+</body>
+</html>
